@@ -33,12 +33,66 @@ server.httpServer = http.createServer((req, res) => {
         buffer += decoder.write(chunk);
     });
 
-    req.on("end", () => {
+    req.on("end", async () => {
         buffer += decoder.end();
 
-        //@todo : Complete the route handler
+        const data = {
+            trimmedPath,
+            queryStringObject,
+            method,
+            headers,
+            payload: buffer
+        };
 
+        async function choseHandler(trimmedPath) {
+            if (handler[trimmedPath]) {
+                const receivedData = await handler[trimmedPath]();
+                console.log('receivedData.statusCode', receivedData.statusCode);
+                sendResponse(receivedData.statusCode, receivedData.payload);
+            } else {
+                const receivedData = await handler.notFound();
+                console.log('receivedData', receivedData);
+                sendResponse(receivedData.statusCode, receivedData.payload);
+            }
+        }
+
+        await choseHandler(trimmedPath);
+
+        function sendResponse(statusCode, payload) {
+            try {
+                const statusCodeToSend = typeof statusCode === 'number' ? statusCode : 200;
+                const payloadToSend = typeof payload === 'object' ? payload : {};
+                const stringifyPayload = JSON.stringify(payloadToSend);
+
+                res.setHeader('Content-Type', 'application/json');
+                res.writeHead(statusCodeToSend);
+                res.end(stringifyPayload);
+            } catch (err) {
+                console.log('error', err);
+            }
+        }
     })
 });
+
+// Start the server
+server.httpServer.listen(3000, () => {
+    console.log('Server is listening on port 3000');
+});
+
+
+const handler = {};
+
+
+handler.sample = () => {
+    return new Promise((resolve, reject) => {
+        return resolve({statusCode: 200, payload: {msg: 'Sample route is working'}});
+    })
+};
+
+handler.notFound = () => {
+    return new Promise((resolve, reject) => {
+        return resolve({statusCode: 404, payload: {error: 'Page not found'}});
+    })
+};
 
 module.exports = server;
