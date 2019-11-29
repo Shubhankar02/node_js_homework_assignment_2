@@ -1,6 +1,7 @@
 const http = require('http');
 const url = require("url");
 const {StringDecoder} = require("string_decoder");
+const routeHandler = require('./handlers/route.handler');
 
 const server = {};
 
@@ -36,7 +37,7 @@ server.httpServer = http.createServer((req, res) => {
     req.on("end", async () => {
         buffer += decoder.end();
 
-        const data = {
+        const dataToSendToHandler = {
             trimmedPath,
             queryStringObject,
             method,
@@ -44,19 +45,28 @@ server.httpServer = http.createServer((req, res) => {
             payload: buffer
         };
 
-        async function choseHandler(trimmedPath) {
-            if (handler[trimmedPath]) {
-                const receivedData = await handler[trimmedPath]();
-                console.log('receivedData.statusCode', receivedData.statusCode);
-                sendResponse(receivedData.statusCode, receivedData.payload);
-            } else {
-                const receivedData = await handler.notFound();
-                console.log('receivedData', receivedData);
-                sendResponse(receivedData.statusCode, receivedData.payload);
-            }
-        }
+        /*
+        @Todo : send dataToSendToHandler to route handler and get the statusCode
+        if the status code is other than 405, send to controller
+        else send the response with 405, method not allowed
+         */
 
-        await choseHandler(trimmedPath);
+        const receivedData = await routeHandler.init(dataToSendToHandler);
+        sendResponse(receivedData.statusCode, receivedData.payload);
+
+        // async function choseHandler(trimmedPath) {
+        //     if (handler[trimmedPath]) {
+        //         const receivedData = await handler[trimmedPath]();
+        //         console.log('receivedData.statusCode', receivedData.statusCode);
+        //         sendResponse(receivedData.statusCode, receivedData.payload);
+        //     } else {
+        //         const receivedData = await handler.notFound();
+        //         console.log('receivedData', receivedData);
+        //         sendResponse(receivedData.statusCode, receivedData.payload);
+        //     }
+        // }
+
+        // await choseHandler(trimmedPath);
 
         function sendResponse(statusCode, payload) {
             try {
@@ -84,13 +94,13 @@ const handler = {};
 
 
 handler.sample = () => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         return resolve({statusCode: 200, payload: {msg: 'Sample route is working'}});
     })
 };
 
 handler.notFound = () => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         return resolve({statusCode: 404, payload: {error: 'Page not found'}});
     })
 };
