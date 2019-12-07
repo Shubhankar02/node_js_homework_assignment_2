@@ -1,28 +1,28 @@
 const assert = require('assert');
-
+const debuglog = require('util').debuglog(process.env.NODE_DEBUG || 'server');
 const objectBuilderUtils = {};
 
 /**
  *
  * @param {Number} statusCode
- * @param {Object} payload
- * @return {Promise<Object>}
+ * @param {Object | String} payload
+ * @return {{payload: (String|Object), statusCode: Number}}
  */
 objectBuilderUtils.getResponseObject = (statusCode, payload) => {
-    return new Promise(async (resolve, reject) => {
-        try {
-            assert(statusCode, 'Missing statusCode');
-            assert(payload, 'Missing payload');
+    try {
+        assert(statusCode, 'Missing statusCode');
+        assert(payload, 'Missing payload');
 
-            return resolve({
-                statusCode: statusCode,
-                payload: payload``
-            })
+        debuglog('payload', typeof payload);
 
-        } catch (err) {
-            return reject(err);
+        return {
+            statusCode: statusCode,
+            payload: payload
         }
-    })
+    } catch (err) {
+        debuglog('error', err);
+        return objectBuilderUtils.getErrorResponse(500);
+    }
 };
 
 /**
@@ -56,6 +56,9 @@ objectBuilderUtils.getErrorResponse = (statusCode, payload) => {
                     break;
                 case 500 :
                     payload = 'Internal server error';
+                    break;
+                case 501 :
+                    payload = 'Not yet implemented';
                     break;
                 default :
                     payload = 'Internal server error';

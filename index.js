@@ -2,6 +2,7 @@ const http = require('http');
 const url = require("url");
 const {StringDecoder} = require("string_decoder");
 const routeHandler = require('./handlers/route.handler');
+const debuglog = require('util').debuglog(process.env.NODE_DEBUG);
 
 const server = {};
 
@@ -19,7 +20,7 @@ server.httpServer = http.createServer((req, res) => {
     const trimmedPath = path.replace(/^\/+|\/+$/g, '');
 
     // get the http method
-    const method = req.method.toLowerCase();
+    const method = req.method.toUpperCase();
 
     // get query string as an object
     const queryStringObject = parsedUrl.query;
@@ -52,16 +53,17 @@ server.httpServer = http.createServer((req, res) => {
          */
 
         const receivedData = await routeHandler.init(dataToSendToHandler);
-        sendResponse(receivedData.statusCode, receivedData.payload);
+        debuglog('receivedData', receivedData);
+        sendResponse(receivedData.statusCode, receivedData);
 
         // async function choseHandler(trimmedPath) {
         //     if (handler[trimmedPath]) {
         //         const receivedData = await handler[trimmedPath]();
-        //         console.log('receivedData.statusCode', receivedData.statusCode);
+        //         debuglog('receivedData.statusCode', receivedData.statusCode);
         //         sendResponse(receivedData.statusCode, receivedData.payload);
         //     } else {
         //         const receivedData = await handler.notFound();
-        //         console.log('receivedData', receivedData);
+        //         debuglog('receivedData', receivedData);
         //         sendResponse(receivedData.statusCode, receivedData.payload);
         //     }
         // }
@@ -71,14 +73,14 @@ server.httpServer = http.createServer((req, res) => {
         function sendResponse(statusCode, payload) {
             try {
                 const statusCodeToSend = typeof statusCode === 'number' ? statusCode : 200;
-                const payloadToSend = typeof payload === 'object' ? payload : {};
+                const payloadToSend = typeof payload === 'object' || typeof payload === 'string' ? payload : {};
                 const stringifyPayload = JSON.stringify(payloadToSend);
 
                 res.setHeader('Content-Type', 'application/json');
                 res.writeHead(statusCodeToSend);
                 res.end(stringifyPayload);
             } catch (err) {
-                console.log('error', err);
+                debuglog('error', err);
             }
         }
     })
@@ -86,23 +88,23 @@ server.httpServer = http.createServer((req, res) => {
 
 // Start the server
 server.httpServer.listen(3000, () => {
-    console.log('Server is listening on port 3000');
+    debuglog('Server is listening on port 3000');
 });
 
 
-const handler = {};
-
-
-handler.sample = () => {
-    return new Promise((resolve) => {
-        return resolve({statusCode: 200, payload: {msg: 'Sample route is working'}});
-    })
-};
-
-handler.notFound = () => {
-    return new Promise((resolve) => {
-        return resolve({statusCode: 404, payload: {error: 'Page not found'}});
-    })
-};
+// const handler = {};
+//
+//
+// handler.sample = () => {
+//     return new Promise((resolve) => {
+//         return resolve({statusCode: 200, payload: {msg: 'Sample route is working'}});
+//     })
+// };
+//
+// handler.notFound = () => {
+//     return new Promise((resolve) => {
+//         return resolve({statusCode: 404, payload: {error: 'Page not found'}});
+//     })
+// };
 
 module.exports = server;

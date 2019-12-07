@@ -1,17 +1,27 @@
 const assert = require('assert');
+const debuglog = require('util').debuglog(process.env.NODE_DEBUG);
+
+const controllerMaster = require('../controllers/controllerMaster');
 
 const objectBuildingUtils = require('../utils/object-builder.utils');
 
 const routeHandler = {};
 
 routeHandler.routeName = {
-    user: '/user'
+    user: '/user',
+    sample: '/sample'
 };
 
 routeHandler.availableMethods = {
-    user: ['GET', 'POST', 'PUT', 'DELETE']
+    user: ['GET', 'POST', 'PUT', 'DELETE'],
+    sample: ['GET']
 };
 
+/**
+ * @description : Main function to handle route
+ * @param data
+ * @returns {Promise<Object>}
+ */
 routeHandler.init = (data) => {
     return new Promise(async (resolve, reject) => {
         try {
@@ -20,11 +30,14 @@ routeHandler.init = (data) => {
             const method = data.method;
 
             // Check if the path exist
-            const isPathExist = await checkAvailabilityOfRoute(path);
-            if (isPathExist) {
+            const doesPathExist = await checkAvailabilityOfRoute(path);
+            if (doesPathExist) {
                 const isMethodAvailable = await checkAvailabilityOfMethod(method, path);
                 if (isMethodAvailable) {
                     // route to particular controller
+                    const getResponseFromController = await controllerMaster.getResponseFromControllers(method, path);
+                    debuglog('getResponseObject', getResponseFromController);
+                    return resolve(getResponseFromController);
                 } else {
                     return reject(objectBuildingUtils.getErrorResponse(405));
                 }
@@ -38,13 +51,17 @@ routeHandler.init = (data) => {
     })
 };
 
-
-function checkAvailabilityOfRoute(routeName) {
+/**
+ * @description : Check the availability of route
+ * @param route
+ * @returns {Promise<Boolean | Object>}
+ */
+function checkAvailabilityOfRoute(route) {
     return new Promise(async (resolve, reject) => {
         try {
-            assert(routeName, 'Missing routeName');
+            assert(route, 'Missing route');
 
-            const routeName = routeHandler.routeName[routeName];
+            const routeName = routeHandler.routeName[route];
             if (routeName) {
                 return resolve(true);
             } else {
@@ -66,11 +83,11 @@ function checkAvailabilityOfRoute(routeName) {
 function checkAvailabilityOfMethod(method, routeName) {
     return new Promise(async (resolve, reject) => {
         try {
-            const method = routeHandler.availableMethods[routeName].indexOf(method);
-            if (method > -1) {
-                // route to the controller
+            const indexOfMethod = routeHandler.availableMethods[routeName].indexOf(method);
+            if (indexOfMethod > -1) {
+                return resolve(true);
             } else {
-                return reject('method not found');
+                return reject('indexOfMethod not found');
             }
         } catch (err) {
             console.log('error', err);
